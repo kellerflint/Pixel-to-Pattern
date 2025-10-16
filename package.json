@@ -1,0 +1,22 @@
+{
+  "name": "pixel-to-pattern",
+  "version": "1.0.0",
+  "description": "Project Name: Pixel to Pattern",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "ejs": "^3.1.10",
+    "express": "^5.1.0",
+    "homebrew": "^0.1.0",
+    "mysql2": "^3.15.1",
+    "nodemon": "^3.1.10"
+  }
+}
