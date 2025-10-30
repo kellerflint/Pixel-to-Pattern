@@ -1,12 +1,6 @@
 import dotenv from 'dotenv';
+dotenv.config({ path: './db.env' });
 import { Sequelize } from 'sequelize';
-import path from 'path';
-
-
-const envPath = path.resolve(import.meta.dirname, '../../db.env');
-dotenv.config({
-    path: envPath
-});
 
 
 const { DB_USER, DB_PASSWORD, DB_HOST, DB_DATABASE, DB_PORT } = process.env;

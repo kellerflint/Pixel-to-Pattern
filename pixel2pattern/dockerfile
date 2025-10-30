@@ -1,0 +1,12 @@
+# pixel2pattern/Dockerfile
+FROM node:18-alpine as build
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+# Serve build using Next.js built-in server
+EXPOSE 3000
+CMD ["npm", "start"]

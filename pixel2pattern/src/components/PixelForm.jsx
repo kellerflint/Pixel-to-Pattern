@@ -27,6 +27,7 @@ export default function PixelForm() {
     const [ pixelFill, setPixelFill] = useState([]);
 
     const router = useRouter();
+    const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
     useEffect(() => {
         const startPixels = Array(canvasHeight * canvasWidth).fill("#fff");
@@ -72,7 +73,7 @@ export default function PixelForm() {
         }
 
         try{
-            const res = await fetch('http://localhost:3001/patterns',
+            const res = await fetch(`${API_URL}/patterns`,
                 {
                     method: "POST",
                     headers: {"Content-Type": "application/json"},

@@ -8,6 +8,8 @@ import PixelDisplay from "@/components/PixelDisplay";
 
 export default function EditablePatternView({ post, onCancel, params}) {
     const { id } = useParams();
+    const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
     const [formData, setFormData] = useState({
     pattern_ID: id,
     pattern_name: post.pattern_name,
@@ -24,7 +26,7 @@ export default function EditablePatternView({ post, onCancel, params}) {
 
   const handleSubmit = async(e) => {
     try{
-        const res = await fetch(`http://localhost:3001/update/${id}`,
+        const res = await fetch(`${API_URL}/update/${id}`,
             {
                 method: 'PATCH',
                 headers: {"Content-Type": "application/json"},
