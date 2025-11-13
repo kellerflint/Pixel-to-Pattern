@@ -9,8 +9,7 @@ export default function PostsCollection() {
     useEffect(() => {
         const fetchPosts = async () => {
             try {
-                const API = process.env.NEXT_PUBLIC_API_BASE_URL;
-                const res = await fetch(`${API}/patterns`);
+                const res = await fetch('/patterns');
                 if (!res.ok) throw new Error("failed to fetch posts");
                 const posts = await res.json();
                 setPixelPosts(posts);

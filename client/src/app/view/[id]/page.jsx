@@ -33,7 +33,7 @@ export default function PatternPage({ params }) {
     if (!confirm("Are you sure you want to delete this pattern?")) return;
   
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/patterns/${post.pattern_ID}`, {
+      const res = await fetch(`/patterns/${post.pattern_ID}`, {
         method: "DELETE",
       });
   
@@ -92,8 +92,7 @@ export default function PatternPage({ params }) {
   useEffect(() => {
     const fetchPost = async () => {
       try {
-        const API = process.env.NEXT_PUBLIC_API_BASE_URL;
-        const res = await fetch(`${API}/patterns/${id}`);
+        const res = await fetch(`/patterns/${id}`);
         if (!res.ok) throw new Error(`Failed to fetch post with ID: ${id}`);
         const post = await res.json();
         setPost(post);

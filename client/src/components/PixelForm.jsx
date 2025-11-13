@@ -72,8 +72,7 @@ export default function PixelForm() {
         }
 
         try {
-            const API = process.env.NEXT_PUBLIC_API_BASE_URL;
-            const res = await fetch(`${API}/patterns`,
+            const res = await fetch('/patterns',
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },

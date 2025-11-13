@@ -54,11 +54,7 @@ You will need to create both a `.env` file in the root directory and a `.env.loc
 - `DB_PORT`: The port number the database is running on.  
 - `SERVER_PORT`: The port number for the backend server (default: 3000).
 
-### Client `.env.local` (example.env.local provided in client)
-
-**Required Variables:**
-- `NEXT_PUBLIC_API_BASE_URL`: The base URL for API fetch requests (`http://localhost:3000` for local development or `http://<VM_IP>:3000` for deployment).  
-- `PORT`: The port number for the frontend server.
+**Note:** The frontend uses relative URLs with Next.js rewrites to communicate with the backend. No environment variables are required for the client in Docker setups.
 
 ---
 
@@ -72,12 +68,11 @@ You can run the entire Pixel to Pattern stack locally using Docker Compose.
    ```
 2. Ensure Docker and Docker Compose are installed.
 3. Create a `.env` file in the root directory with the necessary credentials listed above.
-4. Create a `.env.local` file in the client directory with the credentials listed above. 
-5. Build and start all services:
+4. Build and start all services:
    ```bash
    docker compose up --build
    ```
-6. Visit [http://localhost:3001](http://localhost:3001) to access the application.
+5. Visit [http://localhost:3001](http://localhost:3001) to access the application.
 
 To stop containers:
 ```bash
@@ -107,7 +102,7 @@ These steps apply only if you wish to run **Pixel to Pattern** manually without 
    ```bash
    git clone https://github.com/AlexanderORuban/Pixel-to-Pattern.git
    ```
-2. In the root directory, create a `.env` file and a `.env.local` file in the client directory as described above.  
+2. In the root directory, create a `.env` file as described above.  
 3. **Install dependencies** in the root, `server/`, and `client/` directories:
    ```bash
    npm install
@@ -136,10 +131,8 @@ These steps apply only if you wish to run **Pixel to Pattern** manually without 
    docker push ghcr.io/<UserName>/<BackendContainer>:latest
    ```
 4. **Build and push the frontend container:**
-   Replace the `.env.local` base URL with your VM’s IP address, or use the following commands:
    ```bash
-   docker build --no-cache      -t ghcr.io/<Username>/<FrontendContainer>:latest      --build-arg NEXT_PUBLIC_API_BASE_URL=http://<VM_IP>:3000      ./client
-   docker run --rm ghcr.io/<UserName>/<FrontendContainer>:latest printenv | grep NEXT_PUBLIC_API_BASE_URL
+   docker build --no-cache -t ghcr.io/<Username>/<FrontendContainer>:latest ./client
    docker push ghcr.io/<UserName>/<FrontendContainer>:latest
    ```
 
@@ -212,7 +205,7 @@ These steps apply only if you wish to run **Pixel to Pattern** manually without 
   ```
 
 - **Environment variables not loading:**  
-  Ensure `.env` and `.env.local` files are in the correct directories and not ignored by `.dockerignore`.
+  Ensure the `.env` file is in the root directory and not ignored by `.dockerignore`.
 
 - **Containers not starting:**  
   Check logs for detailed errors:
@@ -226,3 +219,40 @@ These steps apply only if you wish to run **Pixel to Pattern** manually without 
   ```bash
   docker exec -it db mysql -u root -p
   ```
+
+  ---
+
+## Backend Unit Tests & Integration Tests
+
+This project includes **unit tests** for the backend using **Jest**.  
+
+### Running the Tests
+
+Run all backend unit tests and integration tests:
+
+```bash
+cd server
+npm install
+docker compose exec backend npm test
+```
+
+  ---
+
+## Frontend Unit Tests
+
+This project includes **unit tests** for the frontend using **Jest**.  
+
+### Running the Tests
+
+Run all frontend unit tests and generate a coverage report:
+
+```bash
+cd client
+npm install
+npm test
+```
+## 📊 Generate a Coverage Report (if not automatic)
+```
+npm test -- --coverage
+```
+   ---
