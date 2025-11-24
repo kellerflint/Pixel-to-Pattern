@@ -263,3 +263,28 @@ npm run cypress:open
 1. Select a browser to view the app in
 1. Select a spec to run from the list, it will auto-run the tests anytime there are changes made to the spec
 ![cypress-spec-list](image.png)
+
+## GitHub Actions Setup
+### Secrets
+To access secrets inside of the repo:
+1. Go to Settings
+2. Scroll down to Security
+3. Click on Secrets and Variables
+4. Click on Actions
+5. Click on New repository secret
+6. Then Add Secret with the proper credentials.
+7. Click Save.
+8. Then Repeat for the rest of the following secrets below...
+
+### Required Secrets
+The following GitHub Secrets need to be created for the CI/CD workflows to run successfully:
+- `VM_HOST` - The VM's IP Address
+- `VM_USERNAME` - The username to SSH into the VM. - put `root`
+- `VM_PASSWORD` - Your VM's password
+- `VM_PROJECT_PATH` - Full path to project directory on VM - put `/root/Pixel-To-Pattern`
+- `GHCR_TOKEN` - GitHub Personal Access Token (Make sure to follow the steps above)
+- `VM_SSH_PORT` - SSH port (only if not using default) - put `22`
+
+***Once All the Secrets are placed and you've go ahead and run this in your terminal..*** 
+
+`bash  git commit --allow-empty -m "Testing GitHub Actions Workflow..."`

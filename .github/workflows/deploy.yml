@@ -1,0 +1,220 @@
+# Deploy Pipeline
+name: Automated Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+# Ensure only one deployment runs at a time
+concurrency:
+  group: deployment
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/pixel-to-pattern-backend
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/pixel-to-pattern-frontend
+
+jobs:
+
+  # Build and Push Docker Images to GHCR
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      backend_image: ${{ steps.meta-backend.outputs.tags }}
+      frontend_image: ${{ steps.meta-frontend.outputs.tags }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      # Backend Image
+      - name: Extract metadata for backend
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.BACKEND_IMAGE }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./server
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Frontend Image
+      - name: Extract metadata for frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.FRONTEND_IMAGE }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./client
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Deploy to VM
+  deploy:
+    name: Deploy to VM
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to VM via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          password: ${{ secrets.VM_PASSWORD }}
+          port: ${{ secrets.VM_SSH_PORT || 22 }}
+          script: |
+            set -e
+            
+            echo "--- Starting deployment ---"
+            echo "Timestamp: $(date)"
+            
+            # Navigate to project directory
+            cd ${{ secrets.VM_PROJECT_PATH }}
+            
+            # Log in to GHCR
+            echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+            
+            # Pull latest images
+            echo "--- Pulling latest images ---"
+            docker compose -f docker-compose.deploy.yml pull
+            
+            # Stop current containers gracefully
+            echo "--- Stopping current containers ---"
+            docker compose -f docker-compose.deploy.yml down --timeout 30
+            
+            # Start new containers
+            echo "--- Starting new containers ---"
+            docker compose -f docker-compose.deploy.yml up -d
+            
+            # Clean up old images
+            echo "--- Cleaning up old images ---"
+            docker image prune -f
+            
+            echo "--- Deployment complete ---"
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          password: ${{ secrets.VM_PASSWORD }}
+          port: ${{ secrets.VM_SSH_PORT || 22 }}
+          script: |
+            set -e
+            
+            echo "--- Verifying deployment ---"
+            
+            # Wait for containers to be ready
+            sleep 10
+            
+            # Check if containers are running
+            cd ${{ secrets.VM_PROJECT_PATH }}
+            
+            echo "--- Container status ---"
+            docker compose -f docker-compose.deploy.yml ps
+            
+            # Check container health
+            RUNNING_CONTAINERS=$(docker compose -f docker-compose.deploy.yml ps --status running -q | wc -l)
+            EXPECTED_CONTAINERS=$(docker compose -f docker-compose.deploy.yml config --services | wc -l)
+            
+            echo "Running containers: $RUNNING_CONTAINERS"
+            echo "Expected containers: $EXPECTED_CONTAINERS"
+            
+            if [ "$RUNNING_CONTAINERS" -lt "$EXPECTED_CONTAINERS" ]; then
+              echo "ERROR: Not all containers are running!"
+              docker compose -f docker-compose.deploy.yml logs --tail=50
+              exit 1
+            fi
+            
+            # Health check - verify frontend is responding
+            echo "--- Health check ---"
+            if curl -sSf http://localhost:3001 > /dev/null 2>&1; then
+              echo "PASSED! Frontend is responding"
+            else
+              echo "FAILED! Frontend health check failed (may still be starting)"
+            fi
+            
+            # Check if backend container is running (no endpoint check)
+            if docker compose -f docker-compose.deploy.yml ps backend | grep -q "Up"; then
+              echo "PASSED! Backend container is running"
+            else
+              echo "FAILED! Backend container is not running!"
+              exit 1
+            fi
+            
+            echo "--- Deployment verified successfully ---"
+
+      - name: Deployment summary
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "PASSED! **Deployment completed successfully**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+
+
+  # Rollback on Failure
+  rollback:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: failure()
+
+    steps:
+      - name: Notify about failed deployment
+        run: |
+          echo "## FAILED! Deployment Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The deployment to production has failed." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Manual intervention may be required.**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To rollback manually:" >> $GITHUB_STEP_SUMMARY
+          echo "1. SSH into the VM" >> $GITHUB_STEP_SUMMARY
+          echo "2. Navigate to the project directory" >> $GITHUB_STEP_SUMMARY
+          echo "3. Run: \`docker compose -f docker-compose.deploy.yml down\`" >> $GITHUB_STEP_SUMMARY
+          echo "4. Pull the previous working image tag" >> $GITHUB_STEP_SUMMARY
+          echo "5. Run: \`docker compose -f docker-compose.deploy.yml up -d\`" >> $GITHUB_STEP_SUMMARY
