@@ -1,6 +1,10 @@
 services:
   frontend:
-    image: ghcr.io/auglebobaugles/pixel-to-pattern-frontend:latest
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_URL}
     container_name: frontend
     ports:
       - "80:3001"
@@ -12,7 +16,9 @@ services:
     restart: unless-stopped
 
   backend:
-    image: ghcr.io/auglebobaugles/pixel-to-pattern-backend:latest
+    build:
+      context: ./server
+      dockerfile: Dockerfile
     container_name: backend
     ports:
       - "3000:3000"

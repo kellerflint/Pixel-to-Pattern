@@ -1,0 +1,50 @@
+# Node dependencies
+node_modules
+
+# Test output
+coverage
+test-results
+*.test.js
+*.spec.js
+
+# Logs
+*.log
+logs/
+
+# Build artifacts
+dist
+build
+.tmp
+.temp
+
+# Git
+.git
+.gitignore
+
+# Docker/compose files
+Dockerfile
+
+# IDE/editor files
+.vscode
+.idea
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.*
+.env.test
+.env.local
+
+# Misc large file types
+*.sqlite
+*.db
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.mp4
+*.mov
+*.csv

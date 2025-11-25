@@ -58,34 +58,35 @@ export default function PixelForm() {
             width: canvasWidth,
             height: canvasHeight,
             colorConfig: pixelFill
-        }
+        };
 
         const formSubmissionInfo = {
             pattern_name: name,
             pattern_info: patternInfo,
             author: author,
             description: description
-        }
+        };
 
         try {
-            const res = await fetch('/patterns',
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(formSubmissionInfo)
-                }
-            )
-            const postID = await res.json();
+            const res = await fetch('/patterns', {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(formSubmissionInfo)
+            });
+
+            const data = await res.json();
 
             if (!res.ok) {
-                throw new Error(`PostID: ${postID} is not ok.`);
-            } else {
-                router.push(`/view/${postID}`);
+                throw new Error(`PostID: ${JSON.stringify(data)} is not ok.`);
             }
+
+            const id = data.pattern_ID;
+
+            router.push(`/view/${id}`);
         } catch (err) {
             console.log("Error submitting pixel art info ", err);
         }
-    }
+    };
 
     const ClearDrawingDialog = () => {
         return (
@@ -140,9 +141,9 @@ export default function PixelForm() {
                     <ToggleButton value="pencil" aria-label='select pencil'>
                         <DrawIcon />
                     </ToggleButton>
-                    <ToggleButton 
-                        data-testid="paint-bucket" 
-                        value="fillBucket" 
+                    <ToggleButton
+                        data-testid="paint-bucket"
+                        value="fillBucket"
                         aria-label='select fill bucket'>
                         <FormatColorFillIcon />
                     </ToggleButton>
@@ -169,7 +170,7 @@ export default function PixelForm() {
 
             {/* Canvas Grid and pixels */}
             <Box sx={{ backgroundColor: 'whitesmoke', width: '100%', padding: '2em' }}>
-                <Box 
+                <Box
                     data-testid="pixel-canvas"
                     sx={{
                         display: 'grid',
@@ -182,7 +183,8 @@ export default function PixelForm() {
                         gridTemplateRows: `repeat(${canvasHeight}, 25px)`,
                         maxWidth: '626px',
                         maxHeight: '626px',
-                        overflow: 'auto'}}
+                        overflow: 'auto'
+                    }}
                 >
                     {pixelFill.map((currentColor, i) => (
                         showGrid ?
@@ -198,7 +200,7 @@ export default function PixelForm() {
                                 }}>
                             </div>
                             :
-                            <div 
+                            <div
                                 key={i}
                                 onClick={() => handlePixelEvent(i)}
                                 style={{
@@ -214,31 +216,31 @@ export default function PixelForm() {
 
             {/* Name and description*/}
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1em', margin: '1em 2em 2em' }}>
-                <TextField 
+                <TextField
                     data-testid="pattern-name"
-                    onChange={(e) => setName(e.target.value)} 
+                    onChange={(e) => setName(e.target.value)}
                     value={name} label="Name Your Pattern"
                 />
-                <TextField 
+                <TextField
                     data-testid="pattern-author"
-                    onChange={(e) => setAuthor(e.target.value)} 
+                    onChange={(e) => setAuthor(e.target.value)}
                     value={author} label="Author"
                 />
                 <TextField
-                    data-testid="pattern-description" 
-                    onChange={(e) => setDescription(e.target.value)} 
-                    value={description} 
-                    multiline 
-                    rows={3} 
+                    data-testid="pattern-description"
+                    onChange={(e) => setDescription(e.target.value)}
+                    value={description}
+                    multiline
+                    rows={3}
                     sx={{ width: '50%', minWidth: '250px' }} label="Description"
                 />
-                
-                <Button 
+
+                <Button
                     data-testid="submit-pattern"
-                    size='large' 
-                    variant='contained' 
-                    sx={{ alignSelf: 'end' }} 
-                    endIcon={<SendIcon />} 
+                    size='large'
+                    variant='contained'
+                    sx={{ alignSelf: 'end' }}
+                    endIcon={<SendIcon />}
                     onClick={submitPixelForm}>Generate Pattern
                 </Button>
             </Box>

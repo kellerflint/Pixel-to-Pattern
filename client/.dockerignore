@@ -1,14 +1,54 @@
+# Node modules
 node_modules
-dist
-build
-coverage
-.tmp
-.cache
+
+# Next.js build output
 .next
 out
-.vscode
+dist
+build
+
+# Cypress output
+cypress/videos
+cypress/screenshots
+
+# Tests and coverage
+coverage
+test-results
+jest.cache
+
+# Logs
+*.log
+logs/
+
+# Git
 .git
+.gitignore
+
+# Docker/compose files
+Dockerfile
+
+# IDE/editor files
+.vscode
+.idea
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*.local
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Misc junk or large files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.mp4
+*.mov
+*.csv
 npm-debug.log
-yarn-error.log
-.pnpm-store
-.eslintcache

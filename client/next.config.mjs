@@ -1,19 +1,20 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-	// Proxy API routes to the backend service when the frontend receives relative requests
 	async rewrites() {
+		const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
+
 		return [
 			{
-				source: '/patterns',
-				destination: 'http://backend:3000/patterns',
+				source: "/patterns",
+				destination: `${apiBase}/patterns`,
 			},
 			{
-				source: '/patterns/:id',
-				destination: 'http://backend:3000/patterns/:id',
+				source: "/patterns/:id",
+				destination: `${apiBase}/patterns/:id`,
 			},
 			{
-				source: '/update/:id',
-				destination: 'http://backend:3000/update/:id',
+				source: "/update/:id",
+				destination: `${apiBase}/update/:id`,
 			},
 		];
 	},

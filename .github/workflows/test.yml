@@ -1,0 +1,152 @@
+name: Automated Testing Pipeline
+
+defaults:
+  run:
+    working-directory: .
+
+# Workflow triggers only on pull requests and pushes to main or development branches
+on:
+  push:
+    branches: [ main, development ]
+  pull_request:
+    branches: [ main, development ]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    env:
+      # Test environment variables for backend tests
+      DB_HOST: db-test
+      DB_USER: testuser
+      DB_PASSWORD: testpass
+      DB_DATABASE: test_db
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v3
+
+      # Debug: Validate that docker-compose.test.yml exists and loads correctly
+      - name: Validate compose file
+        run: |
+          echo "Listing files..."
+          ls -al .
+          echo "Validating docker-compose.test.yml..."
+          docker compose -f docker-compose.test.yml config
+
+      # Build the backend test containers
+      - name: Build test containers
+        run: docker compose -f docker-compose.test.yml build
+
+      # Debug working directory
+      - name: Print working directory
+        run: pwd
+
+      - name: List files in working directory
+        run: ls -al
+
+      # Run backend units tests via Jest
+      - name: Run backend unit tests
+        run: docker compose -f docker-compose.test.yml up backend-unit-tests --abort-on-container-exit --exit-code-from backend-unit-tests
+
+      # Run backend integration tests for DB + API with Supertest
+      - name: Run backend integration tests (DB + API)
+        run: docker compose -f docker-compose.test.yml up db-test backend-integration --abort-on-container-exit --exit-code-from backend-integration
+
+      # Always clean up the test containers even if the tests fail
+      - name: Cleanup test containers
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v || true
+
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    env:
+      # Test environment variables for frontend tests
+      NODE_ENV: test
+      CI: "true"
+
+    steps:
+      - uses: actions/checkout@v3
+
+      # Debug: Validate that docker-compose.test.yml exists and loads correctly
+      - name: Validate compose file
+        run: |
+          echo "Listing files..."
+          ls -al .
+          echo "Validating docker-compose.test.yml..."
+          docker compose -f docker-compose.test.yml config
+
+      # Build the frontend test containers from docker-compose.test.yml
+      - name: Build test containers
+        run: docker compose -f docker-compose.test.yml build
+
+      # Debug working directory
+      - name: Print working directory
+        run: pwd
+
+      - name: List files in working directory
+        run: ls -al
+
+      # Run the frontend unit tests with Jest and the React Testing Library
+      - name: Run frontend unit tests
+        run: docker compose -f docker-compose.test.yml up frontend-tests --abort-on-container-exit --exit-code-from frontend-tests
+
+      # Always clean up the test containers even if the tests fail
+      - name: Cleanup
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v || true
+
+
+  e2e-tests:
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests] # Only runs the E2E tests if unit and integration tests pass
+    env:
+      # Test environment variables for E2E
+      DB_HOST: db-test
+      DB_USER: testuser
+      DB_PASSWORD: testpass
+      DB_DATABASE: test_db
+      NODE_ENV: test
+      NEXT_PUBLIC_API_BASE_URL: http://backend:3000   # required for Next.js rewrites
+
+    steps:
+      - uses: actions/checkout@v3
+
+      # Create CI .env file so docker-compose.yml does not fail (required by env_file: .env)
+      - name: Create CI .env file
+        run: |
+          echo "DB_HOST=db" >> .env
+          echo "DB_USER=testuser" >> .env
+          echo "DB_PASSWORD=testpass" >> .env
+          echo "DB_DATABASE=test_db" >> .env
+          echo "NODE_ENV=test" >> .env
+          echo "NEXT_PUBLIC_API_BASE_URL=http://backend:3000" >> .env    # <-- REQUIRED
+
+      # Install dependencies so Cypress exists on the GitHub runner
+      - name: Install dependencies
+        run: npm install
+
+      # Build the containers and start the full application from docker-compose.yml
+      - name: Build full stack
+        run: docker compose up -d --build
+
+      # Wait until the backend API server is ready (no /health route needed)
+      - name: Wait for backend API server to be ready
+        run: |
+          echo "Waiting for backend..."
+          timeout 60 bash -c 'until curl -s http://localhost:3000/ > /dev/null; do sleep 2; done'
+
+      # Wait until the frontend is ready (no /health route needed)
+      - name: Wait for frontend
+        run: |
+          echo "Waiting for frontend..."
+          timeout 60 bash -c 'until curl -s http://localhost:3001/ > /dev/null; do sleep 2; done'
+
+      # Run the end-to-end tests using Cypress and full application
+      - name: Run Cypress E2E tests
+        run: npm run cypress:run
+
+      # Clean up the test containers after runtime
+      - name: Shutdown app stack
+        if: always()
+        run: docker compose down || true

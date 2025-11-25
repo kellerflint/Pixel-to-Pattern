@@ -6,9 +6,9 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import PixelDisplay from "@/components/PixelDisplay";
 
-export default function EditablePatternView({ post, onCancel, params}) {
-    const { id } = useParams();
-    const [formData, setFormData] = useState({
+export default function EditablePatternView({ post, onCancel, params }) {
+  const { id } = useParams();
+  const [formData, setFormData] = useState({
     pattern_ID: id,
     pattern_name: post.pattern_name,
     description: post.description,
@@ -22,21 +22,21 @@ export default function EditablePatternView({ post, onCancel, params}) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async(e) => {
-    try{
-        const res = await fetch(`/update/${id}`,
-            {
-                method: 'PATCH',
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify(formData)
-            }
-        )
-
-        if(!res.ok){
-            throw new Error (`PostID: ${id} was not able to be updated.`);
+  const handleSubmit = async (e) => {
+    try {
+      const res = await fetch(`/update/${id}`,
+        {
+          method: 'PATCH',
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData)
         }
-    } catch(err) {
-        console.error("Error updating pixel art info with ID: ", id);
+      )
+
+      if (!res.ok) {
+        throw new Error(`PostID: ${id} was not able to be updated.`);
+      }
+    } catch (err) {
+      console.error("Error updating pixel art info with ID: ", id);
     }
 
     onCancel();
@@ -44,32 +44,53 @@ export default function EditablePatternView({ post, onCancel, params}) {
 
   return (
     <Card sx={{ flex: 1, minWidth: 350, maxWidth: 550, boxShadow: 3, borderRadius: 3, backgroundColor: "#fff", }} >
-      <CardContent component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", 
-        alignItems: "center", textAlign: "center", p: { xs: 2, md: 3 }, }} >
+      <CardContent component="form" onSubmit={handleSubmit} sx={{
+        display: "flex", flexDirection: "column",
+        alignItems: "center", textAlign: "center", p: { xs: 2, md: 3 },
+      }} >
         <PixelDisplay patternInfo={formData.pattern_info} displayHeight={250} displayWidth={250} />
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 2 }}>
-          <TextField  label="Pattern Name" name="pattern_name" variant="outlined" 
-          value={formData.pattern_name} onChange={handleChange} sx={{ flex: 1 }} /> </Box>
+          <TextField label="Pattern Name" name="pattern_name" variant="outlined"
+            value={formData.pattern_name} onChange={handleChange} sx={{ flex: 1 }} /> </Box>
 
-        <TextField label="Author" name="author" variant="outlined" value={formData.author} 
-        onChange={handleChange} sx={{ mt: 2, width: "80%" }} />
+        <TextField label="Author" name="author" variant="outlined" value={formData.author}
+          onChange={handleChange} sx={{ mt: 2, width: "80%" }} />
 
-        <TextField label="Date" name="date" type="date" value={formData.date} onChange={handleChange} 
-        sx={{ mt: 2, width: "80%" }} />
+        <TextField label="Date" name="date" type="date" value={formData.date} onChange={handleChange}
+          sx={{ mt: 2, width: "80%" }} />
 
         <Divider sx={{ width: "80%", my: 2 }} />
 
-        <TextField label="Description" name="description" multiline minRows={4} value={formData.description} 
-        onChange={handleChange} variant="outlined" sx={{ width: "90%" }} />
+        <TextField label="Description" name="description" multiline minRows={4} value={formData.description}
+          onChange={handleChange} variant="outlined" sx={{ width: "90%" }} />
 
         <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mt: 3 }}>
-          <Button onClick={handleSubmit} type="submit" variant="contained" color="primary" startIcon={<SaveIcon />} > 
+          <Button onClick={handleSubmit} type="submit" variant="contained" color="primary" startIcon={<SaveIcon />} >
             Save
           </Button>
 
           <Button variant="outlined" color="secondary" startIcon={<CancelIcon />} onClick={onCancel}>
             Cancel
+          </Button>
+
+          <Button
+            data-testid="delete-pattern"
+            variant="outlined"
+            color="error"
+            onClick={async () => {
+              try {
+                const res = await fetch(`/patterns/${id}`, {
+                  method: "DELETE"
+                });
+                if (!res.ok) throw new Error("Failed to delete");
+                window.location.href = "/";
+              } catch (err) {
+                console.error("Error deleting pattern:", err);
+              }
+            }}
+          >
+            Delete
           </Button>
         </Box>
       </CardContent>

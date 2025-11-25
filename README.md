@@ -5,6 +5,20 @@ Let the creativity flow.
 
 ---
 
+## Table of Contents
+
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Environment Variables](#environment-variables)
+- [Running Locally with Docker Compose](#running-locally-with-docker-compose)
+- [Local Setup (Non-Docker)](#local-setup-non-docker)
+- [VM Setup & Automated Deployment](#vm-setup--automated-deployment)
+- [Troubleshooting](#troubleshooting)
+- [Manual Testing](#manual-testing)
+- [Automated Testing Pipeline (GitHub Actions)](#automated-testing-pipeline-github-actions)
+
+---
+
 ## Features
 
 ### Create  
@@ -24,8 +38,11 @@ Browse all submitted creations and view detailed, stitch-by-stitch patterns.
 ### Update  
 Users will soon be able to edit their own patterns directly.
 
-### Delete *(Coming Soon)*  
-Remove any pattern you’ve posted with one click.
+### Delete
+Users are able to delete their own patterns directly.
+
+### Export to PDF 
+Users are able to export their pattern to a PDF document.
 
 ---
 
@@ -34,189 +51,176 @@ Remove any pattern you’ve posted with one click.
 - **Frontend:** Next.js, Material UI, React  
 - **Backend:** Node.js, Express  
 - **Database:** MySQL with Sequelize ORM  
-- **Deployment:** Docker containers, GitHub Container Repository (GHCR)  
+- **Infrastructure:** Docker & Docker Compose  
+- **CI/CD:** GitHub Actions  
 - **Version:** Node 24+
 
 ---
 
 ## Environment Variables
 
-This project utilizes environment variables for configuration.  
-You will need to create both a `.env` file in the root directory and a `.env.local` file in the client directory, as outlined below.
+The backend uses a `.env` file in the root directory.
 
-### Server `.env` (example.env provided in root)
+### Server `.env` (example.env provided)
 
-**Required Variables:**
-- `DB_USER`: The username for the database user.  
-- `DB_PASSWORD`: The password for the database user.  
-- `DB_HOST`: The IP address for the machine running the database (use `localhost` for local development or `db` for Docker).  
-- `DB_DATABASE`: The name of the database to access.  
-- `DB_PORT`: The port number the database is running on.  
-- `SERVER_PORT`: The port number for the backend server (default: 3000).
+```
+DB_USER=
+DB_PASSWORD=
+DB_HOST=
+DB_DATABASE=
+DB_PORT=
+SERVER_PORT=3000
+```
 
-**Note:** The frontend uses relative URLs with Next.js rewrites to communicate with the backend. No environment variables are required for the client in Docker setups.
+**Note:**  
+The frontend does *not* use a `.env.production` file anymore.  
+The API URL is injected during the Docker build step automatically.
 
 ---
 
 ## Running Locally with Docker Compose
 
-You can run the entire Pixel to Pattern stack locally using Docker Compose.
+Run the entire app locally in one command.
 
-1. **Fork and clone** this repository:
+1. Clone the repository:
    ```bash
    git clone https://github.com/AlexanderORuban/Pixel-to-Pattern.git
    ```
-2. Ensure Docker and Docker Compose are installed.
-3. Create a `.env` file in the root directory with the necessary credentials listed above.
-4. Build and start all services:
+2. Create a `.env` file in the project root (see above).
+3. Start everything:
    ```bash
    docker compose up --build
    ```
-5. Visit [http://localhost:3001](http://localhost:3001) to access the application.
+4. Visit the app:  
+   http://localhost:3001
 
-To stop containers:
-```bash
-docker compose down
-```
-
-### Rebuilding or Restarting Containers
-
-If you make code changes and want to rebuild the images:
+### Rebuild images:
 ```bash
 docker compose build --no-cache
 docker compose up -d
 ```
 
-To restart containers without rebuilding:
+### Restart only:
 ```bash
 docker compose restart
 ```
+
 ---
+
 ## Local Setup (Non-Docker)
 
-These steps apply only if you wish to run **Pixel to Pattern** manually without Docker.
-1. **Fork and clone** this repository:
-   ```bash
-   git clone https://github.com/AlexanderORuban/Pixel-to-Pattern.git
-   ```
-2. In the root directory, create a `.env` file as described above.  
-3. **Install dependencies** in the root, `server/`, and `client/` directories:
+Only if you want to run the backend/frontend manually.
+
+1. Clone the repo  
+2. Create your `.env`  
+3. Install dependencies:
    ```bash
    npm install
    ```
-4. Run the application from the root:
+4. Start full dev environment:
    ```bash
    npm run dev
    ```
-5. Open your browser at [http://localhost:3001](http://localhost:3001)  
-6. Start creating your pattern.
+5. Visit http://localhost:3001
 
 ---
 
-## Deployment Process
+## VM Setup & Automated Deployment
 
-### Steps
+This project includes **automatic production deployment** using GitHub Actions.  
+When a pull request is merged into `main`, the app **auto-deploys** to the VM.
 
-1. Create GHCR containers for both frontend and backend.  
-2. Log into GHCR in your terminal or code editor:
-   ```bash
-   echo "<YOUR_GITHUB_TOKEN>" | docker login ghcr.io -u <your_github_username> --password-stdin
-   ```
-3. **Build and push the backend container:**
-   ```bash
-   docker build --no-cache -t ghcr.io/<UserName>/pixel-to-pattern-backend:latest ./server
-   docker push ghcr.io/<UserName>/pixel-to-pattern-backend:latest
-   ```
+### 1. First-Time VM Setup (only done once)
 
-4. **Build and push the frontend container:**
-   ```bash
-   docker build --no-cache -t ghcr.io/<Username>/pixel-to-pattern-frontend ./client
-   docker push ghcr.io/<UserName>/pixel-to-pattern-frontend:latest
-   ```
+SSH into the VM:
+```bash
+ssh root@<VM_IP>
+```
+
+Install Docker + Compose:
+```bash
+sudo apt-get update -y
+yes | sudo DEBIAN_FRONTEND=noninteractive apt-get -yqq upgrade
+sudo apt install -y ca-certificates curl gnupg lsb-release
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+ | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) \
+ signed-by=/etc/apt/keyrings/docker.gpg] \
+ https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+ | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io \
+ docker-buildx-plugin docker-compose-plugin
+```
+
+Confirm install:
+```bash
+docker run hello-world
+```
+
+After this, the VM is fully ready for auto-deployment.
+
 ---
 
-## VM Setup
+### 2. Automated Deployment (GitHub Actions)
 
-1. Log into your VM:
-   ```bash
-   ssh root@<VM_IP>
-   ```
-2. Update the package index:
-   ```bash
-   sudo apt-get update -y
-   ```
-3. Upgrade existing packages (non-interactive):
-   ```bash
-   yes | sudo DEBIAN_FRONTEND=noninteractive apt-get -yqq upgrade
-   ```
-4. Install Docker dependencies:
-   ```bash
-   sudo apt install -y ca-certificates curl gnupg lsb-release
-   ```
-5. Add the Docker GPG key and repository:
-   ```bash
-   sudo mkdir -p /etc/apt/keyrings
-   curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-   echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg]    https://download.docker.com/linux/ubuntu    $(lsb_release -cs) stable" |    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-   ```
-6. Install the Docker engine and compose plugin:
-   ```bash
-   sudo apt update
-   sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-   ```
-7. Verify installation:
-   ```bash
-   sudo docker run hello-world
-   ```
-   Expected output: “Hello from Docker!”
-8. Create a new project directory:
-   ```bash
-   mkdir <project_name> && cd <project_name>
-   ```
-9. Add your `docker-compose.deploy.yml` file to the directory.  
-10. Create a `.env` file and place it at the same level as the YAML file.  
-11. Pull the images:
-    ```bash
-    docker compose -f docker-compose.deploy.yml pull
-    ```
-12. Start the application:
-    ```bash
-    docker compose -f docker-compose.deploy.yml up -d
-    ```
-13. Verify the containers are running:
-    ```bash
-    docker ps
-    ```
+Every time you merge a PR into `main`:
+
+✔ Latest code is pulled onto the VM  
+✔ Old deployment folder is removed  
+✔ `.env` is written using GitHub Secrets  
+✔ Containers are rebuilt + restarted  
+✔ Backend is checked with `/health` endpoint  
+✔ Deployment succeeds or fails in GitHub Actions
+
+### Required GitHub Secrets
+
+| Secret | Purpose |
+|--------|---------|
+| `VM_HOST` | VM IP |
+| `VM_USERNAME` | Usually `root` |
+| `VM_PASSWORD` | VM password |
+| `DB_HOST` | MySQL host |
+| `DB_USER` | DB user |
+| `DB_PASSWORD` | DB password |
+| `DB_DATABASE` | DB name |
+| `DB_PORT` | DB port |
+| `NEXT_PUBLIC_API_URL` | Backend URL (e.g., http://<VM_IP>:3000) |
+
+### Workflow location
+```
+.github/workflows/deploy.yml
+```
+
+You never need to SSH and deploy manually unless something breaks.
 
 ---
 
 ## Troubleshooting
 
-**Common Docker Issues**
+**Ports already in use**
+```bash
+docker ps
+docker stop <container>
+```
 
-- **Ports already in use:**  
-  Stop conflicting containers or change the port in `docker-compose.yml`.  
-  ```bash
-  docker ps
-  docker stop <container_id>
-  ```
+**MySQL issues**
+- Ensure `.env` exists on VM
+- Use `DB_HOST=db` when running under Docker  
+Check DB logs:
+```bash
+docker logs db
+```
 
-- **Environment variables not loading:**  
-  Ensure the `.env` file is in the root directory and not ignored by `.dockerignore`.
+**Frontend hitting 404s**
+- Means wrong API URL was injected  
+- Update `NEXT_PUBLIC_API_URL` secret  
+- Merge another PR to redeploy
 
-- **Containers not starting:**  
-  Check logs for detailed errors:
-  ```bash
-  docker compose logs
-  ```
+---
 
-- **MySQL connection errors:**  
-  Use `DB_HOST=db` in your `.env` when using Docker Compose.  
-  Test with:
-  ```bash
-  docker exec -it db mysql -u root -p
-  ```
-## Testing
+## Manual Testing
 ### Run all unit and integration tests in Docker
 1. *(If needed)* force Docker to build/rebuild clean docker-compose.test image: 
 ```
@@ -263,3 +267,27 @@ npm run cypress:open
 1. Select a browser to view the app in
 1. Select a spec to run from the list, it will auto-run the tests anytime there are changes made to the spec
 ![cypress-spec-list](image.png)
+
+---
+
+## Automated Testing Pipeline (GitHub Actions)
+
+Located in:
+```
+.github/workflows/test.yml
+```
+
+Runs automatically on:
+- Pushes to `main` or `development`
+- PRs targeting `main` or `development`
+
+Runs:
+- Backend unit tests  
+- Backend integration tests  
+- Frontend unit tests  
+- Cypress E2E tests  
+
+Blocks merges if any suite fails.  
+View results in the GitHub “Actions” tab.
+
+---
